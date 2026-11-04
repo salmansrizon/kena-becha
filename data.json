@@ -1,0 +1,70 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Rice 5kg",
+      "price": 450,
+      "stock": 20
+    },
+    {
+      "id": 2,
+      "name": "Lentils 1kg",
+      "price": 140,
+      "stock": 30
+    },
+    {
+      "id": 3,
+      "name": "Soybean Oil 1L",
+      "price": 190,
+      "stock": 22
+    },
+    {
+      "id": 4,
+      "name": "Sugar 1kg",
+      "price": 130,
+      "stock": 40
+    },
+    {
+      "id": 5,
+      "name": "Tea 400g",
+      "price": 220,
+      "stock": 15
+    },
+    {
+      "id": 6,
+      "name": "Eggs (dozen)",
+      "price": 150,
+      "stock": 10
+    }
+  ],
+  "sales": [
+    {
+      "id": 1,
+      "productId": 1,
+      "qty": 2,
+      "total": 900,
+      "date": "2026-11-03T10:15:00.000Z"
+    },
+    {
+      "id": 2,
+      "productId": 4,
+      "qty": 3,
+      "total": 390,
+      "date": "2026-11-03T14:40:00.000Z"
+    },
+    {
+      "id": 3,
+      "productId": 6,
+      "qty": 1,
+      "total": 150,
+      "date": "2026-11-04T09:05:00.000Z"
+    },
+    {
+      "id": 4,
+      "productId": 3,
+      "qty": 3,
+      "total": 570,
+      "date": "2026-11-04T15:50:00.115Z"
+    }
+  ]
+}

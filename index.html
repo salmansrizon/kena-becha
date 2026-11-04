@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kena Becha</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: left; }
+  td.num, th.num { text-align: right; }
+  form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  input, select, button { font: inherit; padding: 6px; }
+  input[type=number] { width: 80px; }
+  .low { color: #c00; font-weight: bold; }
+  #error { color: #c00; min-height: 1.2em; }
+  .totals { display: flex; gap: 24px; font-size: 1.2em; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>Kena Becha</h1>
+<div class="totals">
+  <div>Today: <b id="today"></b></div>
+  <div>All time: <b id="alltime"></b></div>
+</div>
+<p id="error" role="alert"></p>
+
+<h2>Sell</h2>
+<form id="sellForm">
+  <label>Product <select name="productId" required></select></label>
+  <label>Qty <input name="qty" type="number" min="1" step="1" value="1" required></label>
+  <button>Record sale</button>
+</form>
+
+<h2>Products</h2>
+<table>
+  <thead><tr><th>Name</th><th class="num">Price</th><th class="num">Stock</th><th>Restock</th></tr></thead>
+  <tbody id="products"></tbody>
+</table>
+
+<h2>Add product</h2>
+<form id="addForm">
+  <label>Name <input name="name" required></label>
+  <label>Price <input name="price" type="number" min="0" step="any" required></label>
+  <label>Stock <input name="stock" type="number" min="0" step="1" value="0" required></label>
+  <button>Add</button>
+</form>
+
+<h2>Sales</h2>
+<table>
+  <thead><tr><th>Date</th><th>Product</th><th class="num">Qty</th><th class="num">Total</th><th></th></tr></thead>
+  <tbody id="sales"></tbody>
+</table>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const tk = (n) => '৳' + n.toLocaleString();
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+function render(db) {
+  const name = Object.fromEntries(db.products.map((p) => [p.id, p.name]));
+  const today = new Date().toDateString();
+  $('today').textContent = tk(db.sales.filter((s) => new Date(s.date).toDateString() === today).reduce((a, s) => a + s.total, 0));
+  $('alltime').textContent = tk(db.sales.reduce((a, s) => a + s.total, 0));
+
+  const sel = document.querySelector('#sellForm select');
+  const keep = sel.value;
+  sel.innerHTML = db.products.map((p) => `<option value="${p.id}">${esc(p.name)} (${p.stock} left)</option>`).join('');
+  if (keep) sel.value = keep;
+
+  $('products').innerHTML = db.products.map((p) => `
+    <tr><td>${esc(p.name)}</td><td class="num">${tk(p.price)}</td>
+    <td class="num ${p.stock <= 5 ? 'low' : ''}">${p.stock}</td>
+    <td><input type="number" min="1" step="1" value="1" id="rs${p.id}" aria-label="Restock qty for ${esc(p.name)}">
+    <button onclick="restock(${p.id})">+ Add</button></td></tr>`).join('');
+
+  $('sales').innerHTML = db.sales.slice().reverse().map((s) => `
+    <tr><td>${new Date(s.date).toLocaleString()}</td><td>${esc(name[s.productId] ?? '?')}</td>
+    <td class="num">${s.qty}</td><td class="num">${tk(s.total)}</td>
+    <td><button onclick="undo(${s.id})">Undo</button></td></tr>`).join('');
+}
+
+async function post(action, body) {
+  const res = await fetch('/api/' + action, { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  $('error').textContent = res.ok ? '' : data.error;
+  if (res.ok) render(data);
+  return res.ok;
+}
+
+const restock = (id) => post('restock', { productId: id, qty: Number($('rs' + id).value) });
+const undo = (id) => confirm('Undo this sale and return stock?') && post('undo', { saleId: id });
+
+$('sellForm').onsubmit = (e) => {
+  e.preventDefault();
+  const f = e.target;
+  post('sell', { productId: Number(f.productId.value), qty: Number(f.qty.value) }).then((ok) => ok && (f.qty.value = 1));
+};
+$('addForm').onsubmit = (e) => {
+  e.preventDefault();
+  const f = e.target;
+  post('add', { name: f.name.value, price: Number(f.price.value), stock: Number(f.stock.value) }).then((ok) => ok && f.reset());
+};
+
+fetch('/api/data').then((r) => r.json()).then(render);
+</script>
+</body>
+</html>
