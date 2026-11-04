@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { actions } = require('./server');
+const { actions } = require('./actions');
 
 const db = { products: [{ id: 1, name: 'Rice', price: 450, stock: 3 }], sales: [] };
 

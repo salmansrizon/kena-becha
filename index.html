@@ -23,6 +23,7 @@
   <div>Today: <b id="today"></b></div>
   <div>All time: <b id="alltime"></b></div>
 </div>
+<p id="demo" hidden>Demo mode: changes are saved in this browser only. <button id="reset">Reset demo</button></p>
 <p id="error" role="alert"></p>
 
 <h2>Sell</h2>
@@ -52,8 +53,11 @@
   <tbody id="sales"></tbody>
 </table>
 
+<script src="actions.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
+const KEY = 'kena-becha-demo';
+let demoDb = null; // set when no server (e.g. GitHub Pages)
 const tk = (n) => '৳' + n.toLocaleString();
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -81,7 +85,16 @@ function render(db) {
 }
 
 async function post(action, body) {
-  const res = await fetch('/api/' + action, { method: 'POST', body: JSON.stringify(body) });
+  if (demoDb) {
+    const next = structuredClone(demoDb);
+    try { actions[action](next, body); } catch (e) { $('error').textContent = e.message; return false; }
+    demoDb = next;
+    try { localStorage.setItem(KEY, JSON.stringify(demoDb)); } catch {}
+    $('error').textContent = '';
+    render(demoDb);
+    return true;
+  }
+  const res = await fetch('api/' + action, { method: 'POST', body: JSON.stringify(body) });
   const data = await res.json();
   $('error').textContent = res.ok ? '' : data.error;
   if (res.ok) render(data);
@@ -102,7 +115,22 @@ $('addForm').onsubmit = (e) => {
   post('add', { name: f.name.value, price: Number(f.price.value), stock: Number(f.stock.value) }).then((ok) => ok && f.reset());
 };
 
-fetch('/api/data').then((r) => r.json()).then(render);
+async function start() {
+  const res = await fetch('api/data').catch(() => null);
+  if (res?.ok) return render(await res.json());
+  // No server: demo mode. Start from saved browser copy, else sample data.json.
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(KEY)); } catch {}
+  demoDb = saved || await (await fetch('data.json')).json();
+  $('demo').hidden = false;
+  render(demoDb);
+}
+$('reset').onclick = async () => {
+  try { localStorage.removeItem(KEY); } catch {}
+  demoDb = await (await fetch('data.json', { cache: 'no-store' })).json();
+  render(demoDb);
+};
+start();
 </script>
 </body>
 </html>
